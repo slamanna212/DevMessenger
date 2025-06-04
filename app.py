@@ -114,7 +114,7 @@ def github_webhook():
         return jsonify({"message": "Not an issue event"}), 200
         
     # Only process when issues are typed
-    if data['action'] != 'opened':
+    if data['action'] != 'typed':
         logger.info(f"Skipping issue event with action: {data['action']}")
         return jsonify({"message": "Not an issue typing event"}), 200
     
