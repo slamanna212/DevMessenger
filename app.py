@@ -59,7 +59,7 @@ def send_discord_notification(webhook_url, issue_data):
         "title": f"New Issue: {issue['title']}",
         "description": issue['body'][:2000] if issue['body'] else "No description provided",
         "url": issue['html_url'],
-        "color": 5814783,  # Blue color
+        "color": int('2a84f8', 16) if issue_type.get('name', '').lower() == 'feature' else int('f8412d', 16) if issue_type.get('name', '').lower() == 'bug' else 5814783,  # Blue for feature, Red for bug, Default blue for others
         "fields": [
             {
                 "name": "Repository",
