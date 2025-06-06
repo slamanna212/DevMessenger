@@ -71,10 +71,10 @@ logger.info(f"   ├─ Feature webhook: {'✓ Configured' if DISCORD_WEBHOOK_FE
 logger.info(f"   └─ Default webhook: {'✓ Configured' if DISCORD_WEBHOOK_DEFAULT else '✗ Not configured'}")
 
 # Display git information
-git_commit = os.getenv('GIT_COMMIT_HASH', 'unknown')
-git_message = os.getenv('GIT_COMMIT_MESSAGE', 'unknown') 
-git_date = os.getenv('GIT_COMMIT_DATE', 'unknown')
-git_branch = os.getenv('GIT_BRANCH', 'unknown')
+git_commit = os.getenv('APP_GIT_COMMIT_HASH', 'unknown')
+git_message = os.getenv('APP_GIT_COMMIT_MESSAGE', 'unknown') 
+git_date = os.getenv('APP_GIT_COMMIT_DATE', 'unknown')
+git_branch = os.getenv('APP_GIT_BRANCH', 'unknown')
 
 if git_commit != 'unknown':
     logger.info("📋 Build Information:")
