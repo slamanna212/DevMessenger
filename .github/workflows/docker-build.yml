@@ -21,6 +21,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch complete git history
+          ref: ${{ github.sha }}  # Ensure we're on the exact commit
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -29,15 +32,26 @@ jobs:
         id: git-info
         run: |
           # Force fresh git info extraction
-          git fetch --unshallow || true
-          echo "commit-hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-          echo "commit-message=$(git log -1 --pretty=format:'%s')" >> $GITHUB_OUTPUT
-          echo "commit-date=$(git log -1 --pretty=format:'%ci')" >> $GITHUB_OUTPUT
-          echo "branch=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          echo "Current commit (github.sha): ${{ github.sha }}"
+          echo "Current ref: ${{ github.ref }}"
+          echo "Head ref: ${{ github.head_ref || github.ref_name }}"
+          
+          # Use GitHub's provided SHA instead of git commands
+          COMMIT_HASH="${{ github.sha }}"
+          COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s' ${{ github.sha }})
+          COMMIT_DATE=$(git log -1 --pretty=format:'%ci' ${{ github.sha }})
+          BRANCH_NAME="${{ github.ref_name }}"
+          
+          echo "commit-hash=${COMMIT_HASH}" >> $GITHUB_OUTPUT
+          echo "commit-message=${COMMIT_MESSAGE}" >> $GITHUB_OUTPUT
+          echo "commit-date=${COMMIT_DATE}" >> $GITHUB_OUTPUT
+          echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+          
           echo "Git info extracted:"
-          echo "  Hash: $(git rev-parse HEAD)"
-          echo "  Message: $(git log -1 --pretty=format:'%s')"
-          echo "  Date: $(git log -1 --pretty=format:'%ci')"
+          echo "  Hash: ${COMMIT_HASH}"
+          echo "  Message: ${COMMIT_MESSAGE}"
+          echo "  Date: ${COMMIT_DATE}"
+          echo "  Branch: ${BRANCH_NAME}"
 
       - name: Log into registry ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
