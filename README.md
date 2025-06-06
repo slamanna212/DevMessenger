@@ -1,34 +1,69 @@
 # GitHub to Discord Notification Bot
 
-This bot receives GitHub webhook notifications for new issues and forwards them to different Discord channels based on the issue labels.
+This bot receives GitHub webhook notifications for new issues and forwards them to Discord channels based on issue labels. Only **bug** and **feature** issue types are supported.
+
+## Features
+
+- ✅ Routes GitHub issue notifications to specific Discord channels:
+  - 🐛 **Bug** issues → Bug Discord channel
+  - ✨ **Feature/Enhancement** issues → Feature Discord channel
+- ✅ Rich Discord embeds with issue details:
+  - Issue title and description
+  - Repository name
+  - Creator information and avatar
+  - Issue type badge
+  - Direct link to the issue
+- ✅ Build information logging (commit hash, message, date, branch)
+- ✅ Comprehensive logging and monitoring
+- ✅ Health check endpoint
+- ✅ Automatic Docker builds via GitHub Actions
 
 ## Setup
 
-### Option 1: Running with Docker (Recommended)
+### Environment Variables
 
-#### Using Pre-built Image
+You only need **two** Discord webhook URLs:
 
-The bot is available as a pre-built Docker image from GitHub Container Registry:
-```bash
-docker pull ghcr.io/slamanna212/github-discord-bot:latest
+```env
+DISCORD_WEBHOOK_BUG=your_bug_webhook_url
+DISCORD_WEBHOOK_FEATURE=your_feature_webhook_url
 ```
 
-#### Building Locally
+### Option 1: Using Pre-built Docker Image (Recommended)
 
-1. Create a `.env` file based on these environment variables:
-   ```
-   DISCORD_WEBHOOK_BUG=your_webhook_url_for_bugs
-   DISCORD_WEBHOOK_FEATURE=your_webhook_url_for_features
-   DISCORD_WEBHOOK_DEFAULT=your_webhook_url_for_other_issues
+The bot is available as a pre-built Docker image from GitHub Container Registry:
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/slamanna212/devmessenger:latest
+
+# Run the container
+docker run -d \
+  --name github-discord-bot \
+  -p 5000:5000 \
+  -e DISCORD_WEBHOOK_BUG="your_bug_webhook_url" \
+  -e DISCORD_WEBHOOK_FEATURE="your_feature_webhook_url" \
+  --restart unless-stopped \
+  ghcr.io/slamanna212/devmessenger:latest
+```
+
+### Option 2: Building Locally
+
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/slamanna212/DevMessenger.git
+   cd DevMessenger
    ```
 
-2. Build the Docker image:
+2. Create a `.env` file:
+   ```bash
+   DISCORD_WEBHOOK_BUG=your_bug_webhook_url
+   DISCORD_WEBHOOK_FEATURE=your_feature_webhook_url
+   ```
+
+3. Build and run:
    ```bash
    docker build -t github-discord-bot .
-   ```
-
-3. Run the container:
-   ```bash
    docker run -d \
      --name github-discord-bot \
      -p 5000:5000 \
@@ -36,97 +71,126 @@ docker pull ghcr.io/slamanna212/github-discord-bot:latest
      github-discord-bot
    ```
 
-### Option 2: Running Locally
+### Option 3: Running Locally (Development)
 
-1. Clone this repository
-2. Install dependencies:
+1. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Create a `.env` file (see format above)
+2. Create a `.env` file (see format above)
 
-4. Run the bot:
+3. Run the bot:
    ```bash
    python app.py
    ```
 
+## Discord Setup
+
+### Creating Webhook URLs
+
+1. **For Bug Channel:**
+   - Go to your Discord server's bug reports channel
+   - Click the gear icon ⚙️ next to the channel name
+   - Go to "Integrations" → "Create Webhook"
+   - Name it "GitHub Bug Reports" and copy the webhook URL
+
+2. **For Feature Channel:**
+   - Go to your Discord server's feature requests channel
+   - Follow the same steps as above
+   - Name it "GitHub Feature Requests" and copy the webhook URL
+
+## GitHub Setup
+
+Configure GitHub to send webhooks when issues are created and labeled:
+
+1. Go to your GitHub repository
+2. Click **"Settings"** → **"Webhooks"** → **"Add webhook"**
+3. Configure:
+   - **Payload URL**: `http://your-server:5000/webhook`
+   - **Content type**: `application/json`
+   - **Events**: Select "Let me select individual events" and choose **"Issues"**
+4. Click **"Add webhook"**
+
+## Supported Issue Types
+
+| Issue Label | Discord Channel | Description |
+|-------------|-----------------|-------------|
+| `bug` | Bug webhook | Issues reporting bugs or problems |
+| `feature` | Feature webhook | Feature requests and enhancements |
+| `enhancement` | Feature webhook | Same as feature |
+| **Other types** | ❌ **Not supported** | Returns error message |
+
+## Build Information
+
+The bot automatically displays build information on startup, including:
+- Git commit hash and message
+- Build date and branch
+- Webhook configuration status
+
+This information is **baked into the code** during Docker build, ensuring it can't be overridden by container orchestration tools.
+
 ## Monitoring and Logging
 
-The bot provides comprehensive logging for all GitHub webhook receipts and Discord message sends.
+### Startup Logs
+```
+🔧 Webhook Configuration:
+   ├─ Bug webhook: ✓ Configured
+   └─ Feature webhook: ✓ Configured
+
+📋 Build Information:
+   ├─ Branch: main
+   ├─ Commit: a1b2c3d4...
+   ├─ Message: Add new feature
+   └─ Date: 2025-01-15T14:30:25-05:00
+
+🚀 Starting GitHub to Discord notification bot
+🌐 Server listening on http://0.0.0.0:5000
+```
+
+### Runtime Logs
+```
+📥 Webhook: issues | ID: 12345678
+📋 Issue #42 in owner/repo | Action: typed
+🏷️  Processing: #42 'Bug in login system...' | Type: bug
+📤 Sending → bug channel: #42 'Bug in login system...' by @username
+✅ Discord → bug: Issue #42 delivered (HTTP 200)
+✅ Complete: Issue #42 → Discord (HTTP 200)
+```
 
 ### Viewing Logs
 
-#### Docker Logs
 ```bash
 # View all logs
 docker logs github-discord-bot
 
 # Follow logs in real-time
 docker logs -f github-discord-bot
-```
 
-#### Local Logs
-When running locally, logs are printed to stdout.
-
-### Log Format
-Logs include timestamps and detailed information about each event:
-```
-2024-02-20 10:15:23 - INFO - Starting GitHub to Discord notification bot
-2024-02-20 10:15:45 - INFO - Received GitHub webhook - Event: issues, Delivery ID: 123e4567-e89b-12d3-a456-426614174000
-2024-02-20 10:15:45 - INFO - Processing new issue #42 from user/repo
-2024-02-20 10:15:45 - INFO - Issue labeled as bug, using bug webhook
-2024-02-20 10:15:45 - INFO - Preparing Discord notification for issue: Bug Report in repo: user/repo
-2024-02-20 10:15:46 - INFO - Successfully sent notification to Discord. Status code: 200
+# View last 100 lines
+docker logs --tail 100 github-discord-bot
 ```
 
 ### Health Check
-The bot provides a health check endpoint at `/health`:
+
+The bot provides a health check endpoint:
 ```bash
 curl http://localhost:5000/health
+# Response: {"status": "healthy"}
 ```
 
-### What's Being Logged
-- GitHub webhook receipts (with event type and delivery ID)
-- Issue processing (issue number and repository)
-- Label detection and webhook selection
-- Discord notification preparation and sending
-- Success/failure of Discord message delivery
-- Application startup and health checks
+## Error Handling
 
-## Discord Setup
+### Unsupported Issue Types
+When an issue is created with an unsupported label, the bot will:
+- Log a warning message
+- Return HTTP 400 with clear error message
+- Not send any Discord notification
 
-1. Get Discord webhook URLs:
-   - In Discord, go to the channel where you want to receive notifications
-   - Click the gear icon ⚙️ next to the channel name
-   - Go to "Integrations" > "Create Webhook"
-   - Give it a name and copy the webhook URL
-   - Repeat for each channel type (bug, feature, default)
-
-## GitHub Setup
-
-1. Configure GitHub webhooks:
-   - Go to your GitHub repository
-   - Click "Settings" > "Webhooks" > "Add webhook"
-   - Set Payload URL to: `http://your-server:5000/webhook`
-   - Content type: `application/json`
-   - Select "Let me select individual events" and choose only "Issues"
-   - Click "Add webhook"
-
-## Features
-
-- Receives GitHub webhook notifications for new issues
-- Routes notifications to different Discord channels based on issue labels:
-  - Issues labeled "bug" go to the bug channel
-  - Issues labeled "feature" or "enhancement" go to the feature channel
-  - All other issues go to the default channel
-- Rich Discord embeds with issue details, including:
-  - Issue title and description
-  - Repository name
-  - Creator information
-  - Issue labels
-  - Direct link to the issue
-- Comprehensive logging and monitoring
+### Missing Webhooks
+If a required webhook URL is not configured:
+- Startup logs will show "✗ Not configured"
+- Runtime will return appropriate error messages
 
 ## Docker Commands Reference
 
@@ -145,51 +209,100 @@ docker rm github-discord-bot
 
 # Restart the container
 docker restart github-discord-bot
+
+# Update to latest version
+docker pull ghcr.io/slamanna212/devmessenger:latest
+docker stop github-discord-bot
+docker rm github-discord-bot
+# Run with new image (use your run command from setup)
 ```
 
-## Note
+## CI/CD Pipeline
 
-Make sure your server is accessible from the internet so GitHub can send webhook notifications. You might need to set up port forwarding or use a service like ngrok for testing.
+The project includes automated GitHub Actions workflows:
 
-## CI/CD
+### Docker Build Workflow
+- **Triggers**: Push to main/dev, Pull Requests, Version tags
+- **Features**:
+  - Extracts git information during build
+  - Builds multi-architecture Docker images
+  - Pushes to GitHub Container Registry (GHCR)
+  - Uses aggressive caching prevention (`no-cache: true`)
 
-The project includes a GitHub Actions workflow that automatically:
-- Builds the Docker image for all pull requests
-- Builds and pushes the image to GitHub Container Registry (GHCR) for:
-  - Pushes to main branch
-  - New version tags (v*.*.*)
+### Available Image Tags
+- `latest`: Most recent build from main branch
+- `main`: Same as latest
+- `dev`: Development branch builds
+- `v*.*.*`: Version release tags
+- `sha-*`: Specific commit builds
 
-### Available Tags
-- `latest`: Most recent build from main
-- `vX.Y.Z`: Specific version releases
-- `vX.Y`: Latest minor version
-- `sha-XXXXXXX`: Specific commit builds
+### Using Specific Versions
+```bash
+# Use latest stable
+docker pull ghcr.io/slamanna212/devmessenger:latest
 
-### Using GitHub Container Registry
-1. Authenticate with GHCR:
-   ```bash
-   docker login ghcr.io -u USERNAME
-   ```
+# Use specific version
+docker pull ghcr.io/slamanna212/devmessenger:v1.2.3
 
-2. Pull the image:
-   ```bash
-   docker pull ghcr.io/OWNER/github-discord-bot:latest
-   ```
+# Use development version
+docker pull ghcr.io/slamanna212/devmessenger:dev
+```
 
-3. Run with your environment file:
-   ```bash
-   docker run -d \
-     --name github-discord-bot \
-     -p 5000:5000 \
-     --env-file .env \
-     ghcr.io/OWNER/github-discord-bot:latest
-   ```
+## Development
+
+### Local Development
+When running locally, the bot will show:
+```
+📋 Build Information: Development build (git info not available)
+```
+
+### Building with Git Information
+Git information is automatically captured during Docker builds. The build process:
+
+1. Extracts current git commit, message, date, and branch
+2. Generates `build_info.py` with this information baked into the code
+3. App imports build information from the generated file (not environment variables)
+4. This prevents container orchestration tools from overriding build metadata
 
 ### Creating Releases
-To create a new version:
-1. Tag your release:
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
-2. The workflow will automatically build and push the tagged version. 
+```bash
+# Tag a new version
+git tag v1.2.3
+git push origin v1.2.3
+
+# GitHub Actions will automatically build and push the tagged version
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"No webhook configured for this issue type"**
+   - Issue was labeled with unsupported type
+   - Only `bug`, `feature`, and `enhancement` are supported
+
+2. **Webhook not receiving notifications**
+   - Check GitHub webhook settings
+   - Ensure your server is accessible from the internet
+   - Verify webhook URL is correct
+
+3. **Container shows old git information**
+   - Ensure you're pulling the latest image: `docker pull ghcr.io/slamanna212/devmessenger:latest`
+   - Check the image tag you're running
+
+### Development Setup
+For local development without Docker:
+1. The `build_info.py` file provides fallback values
+2. Logs will show "Development build"
+3. All functionality works the same
+
+## Network Requirements
+
+- **Inbound**: Port 5000 (HTTP) accessible from GitHub's webhook IPs
+- **Outbound**: HTTPS access to Discord's API (`discord.com`)
+
+For local testing, consider using [ngrok](https://ngrok.com/) to expose your local server.
+
+## License
+
+MIT License - Feel free to modify and distribute! 
