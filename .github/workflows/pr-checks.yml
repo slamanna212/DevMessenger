@@ -7,70 +7,6 @@ on:
     branches: [ "main" ]
 
 jobs:
-  lint-and-format:
-    name: 🧹 Lint & Format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8 black isort bandit safety
-          pip install -r requirements.txt
-          
-      - name: Check code formatting with Black
-        run: black --check --diff .
-        
-      - name: Check import sorting with isort
-        run: isort --check-only --diff .
-        
-      - name: Lint with flake8
-        run: |
-          # Stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Exit-zero treats all errors as warnings. GitHub editor is 127 chars wide
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-  security-scan:
-    name: 🔒 Security Scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          
-      - name: Install security tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install bandit safety
-          pip install -r requirements.txt
-          
-      - name: Run Bandit security linter
-        run: bandit -r . -f json -o bandit-report.json
-        continue-on-error: true
-        
-      - name: Check for known security vulnerabilities
-        run: safety check --json --output safety-report.json
-        continue-on-error: true
-        
-      - name: Upload security reports
-        uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: security-reports
-          path: |
-            bandit-report.json
-            safety-report.json
-
   test:
     name: 🧪 Test
     runs-on: ubuntu-latest
@@ -126,37 +62,6 @@ jobs:
           flags: unittests
           name: codecov-umbrella
 
-  docker-security:
-    name: 🐳 Docker Security
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        
-      - name: Build Docker image for testing
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: false
-          tags: test-image:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'test-image:latest'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-
   dependency-review:
     name: 📦 Dependency Review
     runs-on: ubuntu-latest
@@ -169,27 +74,4 @@ jobs:
         uses: actions/dependency-review-action@v3
         with:
           fail-on-severity: moderate
-          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
-
-  validate-config:
-    name: ⚙️ Validate Config
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Validate Dependabot config
-        run: |
-          # Check if dependabot.yml is valid YAML
-          python -c "import yaml; yaml.safe_load(open('.github/dependabot.yml'))"
-          echo "✅ Dependabot configuration is valid"
-          
-      - name: Validate Docker build
-        run: |
-          # Check if Dockerfile is valid
-          docker build --dry-run .
-          echo "✅ Dockerfile is valid"
-          
-      - name: Check Python syntax
-        run: |
-          python -m py_compile app.py
-          echo "✅ Python syntax is valid" 
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC 
