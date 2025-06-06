@@ -21,6 +21,24 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for proper git info
+
+      - name: Extract git information
+        id: git-info
+        run: |
+          echo "commit-hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "commit-message=$(git log -1 --pretty=%B | tr '\n' ' ' | sed 's/[[:space:]]*$//')" >> $GITHUB_OUTPUT
+          echo "commit-date=$(git log -1 --pretty=%cI)" >> $GITHUB_OUTPUT
+          echo "branch-name=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          
+          # Debug output
+          echo "=== Git Information Debug ==="
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Commit message: $(git log -1 --pretty=%B | tr '\n' ' ')"
+          echo "Commit date: $(git log -1 --pretty=%cI)"
+          echo "Branch: ${GITHUB_REF_NAME}"
+          echo "=========================="
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -54,8 +72,9 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            GIT_COMMIT_HASH=${{ github.sha }}
-            GIT_COMMIT_MESSAGE=${{ github.event.head_commit.message }}
-            GIT_COMMIT_DATE=${{ github.event.head_commit.timestamp }}
-            GIT_BRANCH=${{ github.ref_name }}
-          no-cache: true 
+            GIT_COMMIT_HASH=${{ steps.git-info.outputs.commit-hash }}
+            GIT_COMMIT_MESSAGE=${{ steps.git-info.outputs.commit-message }}
+            GIT_COMMIT_DATE=${{ steps.git-info.outputs.commit-date }}
+            GIT_BRANCH=${{ steps.git-info.outputs.branch-name }}
+          no-cache: true
+          pull: true 
