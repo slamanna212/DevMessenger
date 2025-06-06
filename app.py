@@ -62,13 +62,11 @@ logging.getLogger('werkzeug').setLevel(logging.WARNING)
 # Discord webhook URLs
 DISCORD_WEBHOOK_BUG = os.getenv('DISCORD_WEBHOOK_BUG')
 DISCORD_WEBHOOK_FEATURE = os.getenv('DISCORD_WEBHOOK_FEATURE')
-DISCORD_WEBHOOK_DEFAULT = os.getenv('DISCORD_WEBHOOK_DEFAULT')
 
 # Log webhook configuration status
 logger.info("🔧 Webhook Configuration:")
 logger.info(f"   ├─ Bug webhook: {'✓ Configured' if DISCORD_WEBHOOK_BUG else '✗ Not configured'}")
-logger.info(f"   ├─ Feature webhook: {'✓ Configured' if DISCORD_WEBHOOK_FEATURE else '✗ Not configured'}")
-logger.info(f"   └─ Default webhook: {'✓ Configured' if DISCORD_WEBHOOK_DEFAULT else '✗ Not configured'}")
+logger.info(f"   └─ Feature webhook: {'✓ Configured' if DISCORD_WEBHOOK_FEATURE else '✗ Not configured'}")
 
 # Import build information from generated file (baked into code during build)
 try:
@@ -96,8 +94,8 @@ else:
 def get_webhook_url(issue_type):
     """Determine which Discord webhook URL to use based on issue type"""
     if not issue_type:
-        logger.debug("No issue type provided, using default webhook")
-        return DISCORD_WEBHOOK_DEFAULT
+        logger.debug("No issue type provided, no webhook available")
+        return None
     
     type_name = issue_type['name'].lower()
     logger.debug(f"Issue categorized as: {type_name}")
@@ -109,8 +107,8 @@ def get_webhook_url(issue_type):
         logger.debug("✨ Routing to feature webhook")
         return DISCORD_WEBHOOK_FEATURE
     
-    logger.debug(f"🔀 Type '{type_name}' not matched, using default webhook")
-    return DISCORD_WEBHOOK_DEFAULT
+    logger.debug(f"🔀 Type '{type_name}' not matched, no webhook available")
+    return None
 
 def send_discord_notification(webhook_url, issue_data):
     """Send notification to Discord"""
@@ -126,7 +124,7 @@ def send_discord_notification(webhook_url, issue_data):
         issue_type = issue_data.get('type', {})
         
         # Determine webhook type for logging
-        webhook_type = "default"
+        webhook_type = "unknown"
         if webhook_url == DISCORD_WEBHOOK_BUG:
             webhook_type = "bug"
         elif webhook_url == DISCORD_WEBHOOK_FEATURE:
@@ -227,6 +225,17 @@ def github_webhook():
         
         # Get appropriate webhook URL based on type
         webhook_url = get_webhook_url(data.get('type'))
+        
+        # Check if we have an appropriate webhook configured
+        if not webhook_url:
+            logger.warning(f"⚠️  No webhook configured for issue type: {issue_type}")
+            response_message = {
+                "message": "No webhook configured for this issue type",
+                "issue_number": issue_number,
+                "repository": repo_name,
+                "issue_type": issue_type
+            }
+            return jsonify(response_message), 400
         
         # Send notification
         status_code = send_discord_notification(webhook_url, data)
