@@ -77,6 +77,7 @@ git_date = os.getenv('GIT_COMMIT_DATE', 'unknown')
 git_branch = os.getenv('GIT_BRANCH', 'unknown')
 
 # Debug: Show what we're actually reading from environment
+# Force rebuild: 2025-01-15 to test git extraction fixes
 logger.info("🔍 Debug - Environment Variables:")
 logger.info(f"   ├─ GIT_COMMIT_HASH: {git_commit}")
 logger.info(f"   ├─ GIT_COMMIT_MESSAGE: {git_message}")
