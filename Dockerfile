@@ -14,14 +14,6 @@ ENV GIT_COMMIT_MESSAGE=${GIT_COMMIT_MESSAGE:-unknown}
 ENV GIT_COMMIT_DATE=${GIT_COMMIT_DATE:-unknown}
 ENV GIT_BRANCH=${GIT_BRANCH:-unknown}
 
-# Debug: Show what build args were received
-RUN echo "=== Docker Build Debug Information ===" && \
-    echo "GIT_COMMIT_HASH: ${GIT_COMMIT_HASH}" && \
-    echo "GIT_COMMIT_MESSAGE: ${GIT_COMMIT_MESSAGE}" && \
-    echo "GIT_COMMIT_DATE: ${GIT_COMMIT_DATE}" && \
-    echo "GIT_BRANCH: ${GIT_BRANCH}" && \
-    echo "========================================="
-
 # Install system dependencies (removed git as we don't need it in container)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
@@ -53,20 +45,6 @@ ENV FLASK_ENV=production
 # Add healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
-
-# Final debug: Show environment variables that will be available at runtime
-RUN echo "=== Final Runtime Environment Check ===" && \
-    echo "Runtime GIT_COMMIT_HASH: ${GIT_COMMIT_HASH}" && \
-    echo "Runtime GIT_COMMIT_MESSAGE: ${GIT_COMMIT_MESSAGE}" && \
-    echo "Runtime GIT_COMMIT_DATE: ${GIT_COMMIT_DATE}" && \
-    echo "Runtime GIT_BRANCH: ${GIT_BRANCH}" && \
-    echo "============================================"
-
-# Explicitly re-export environment variables to ensure they persist
-ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
-ENV GIT_COMMIT_MESSAGE=${GIT_COMMIT_MESSAGE}  
-ENV GIT_COMMIT_DATE=${GIT_COMMIT_DATE}
-ENV GIT_BRANCH=${GIT_BRANCH}
 
 # Command to run the application with Gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
