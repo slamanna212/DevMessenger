@@ -70,18 +70,18 @@ logger.info(f"   ├─ Bug webhook: {'✓ Configured' if DISCORD_WEBHOOK_BUG el
 logger.info(f"   ├─ Feature webhook: {'✓ Configured' if DISCORD_WEBHOOK_FEATURE else '✗ Not configured'}")
 logger.info(f"   └─ Default webhook: {'✓ Configured' if DISCORD_WEBHOOK_DEFAULT else '✗ Not configured'}")
 
-# Display git information
-git_commit = os.getenv('APP_GIT_COMMIT_HASH', 'unknown')
-git_message = os.getenv('APP_GIT_COMMIT_MESSAGE', 'unknown') 
-git_date = os.getenv('APP_GIT_COMMIT_DATE', 'unknown')
-git_branch = os.getenv('APP_GIT_BRANCH', 'unknown')
+# Display build information
+build_commit = os.getenv('BUILD_COMMIT_HASH', 'unknown')
+build_message = os.getenv('BUILD_COMMIT_MESSAGE', 'unknown') 
+build_date = os.getenv('BUILD_COMMIT_DATE', 'unknown')
+build_branch = os.getenv('BUILD_BRANCH', 'unknown')
 
-if git_commit != 'unknown':
+if build_commit != 'unknown':
     logger.info("📋 Build Information:")
-    logger.info(f"   ├─ Branch: {git_branch}")
-    logger.info(f"   ├─ Commit: {git_commit[:8]}...")
-    logger.info(f"   ├─ Message: {git_message}")
-    logger.info(f"   └─ Date: {git_date}")
+    logger.info(f"   ├─ Branch: {build_branch}")
+    logger.info(f"   ├─ Commit: {build_commit[:8]}...")
+    logger.info(f"   ├─ Message: {build_message}")
+    logger.info(f"   └─ Date: {build_date}")
 else:
     logger.info("📋 Build Information: Development build (git info not available)")
 
