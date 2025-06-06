@@ -10,9 +10,8 @@ This bot receives GitHub webhook notifications for new issues and forwards them 
 
 The bot is available as a pre-built Docker image from GitHub Container Registry:
 ```bash
-docker pull ghcr.io/OWNER/github-discord-bot:latest
+docker pull ghcr.io/slamanna212/github-discord-bot:latest
 ```
-Replace `OWNER` with your GitHub username.
 
 #### Building Locally
 
