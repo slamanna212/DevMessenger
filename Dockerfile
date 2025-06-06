@@ -54,6 +54,20 @@ ENV FLASK_ENV=production
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/health || exit 1
 
+# Final debug: Show environment variables that will be available at runtime
+RUN echo "=== Final Runtime Environment Check ===" && \
+    echo "Runtime GIT_COMMIT_HASH: ${GIT_COMMIT_HASH}" && \
+    echo "Runtime GIT_COMMIT_MESSAGE: ${GIT_COMMIT_MESSAGE}" && \
+    echo "Runtime GIT_COMMIT_DATE: ${GIT_COMMIT_DATE}" && \
+    echo "Runtime GIT_BRANCH: ${GIT_BRANCH}" && \
+    echo "============================================"
+
+# Explicitly re-export environment variables to ensure they persist
+ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH}
+ENV GIT_COMMIT_MESSAGE=${GIT_COMMIT_MESSAGE}  
+ENV GIT_COMMIT_DATE=${GIT_COMMIT_DATE}
+ENV GIT_BRANCH=${GIT_BRANCH}
+
 # Command to run the application with Gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
 
