@@ -28,10 +28,16 @@ jobs:
       - name: Extract git information
         id: git-info
         run: |
+          # Force fresh git info extraction
+          git fetch --unshallow || true
           echo "commit-hash=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
           echo "commit-message=$(git log -1 --pretty=format:'%s')" >> $GITHUB_OUTPUT
           echo "commit-date=$(git log -1 --pretty=format:'%ci')" >> $GITHUB_OUTPUT
           echo "branch=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          echo "Git info extracted:"
+          echo "  Hash: $(git rev-parse HEAD)"
+          echo "  Message: $(git log -1 --pretty=format:'%s')"
+          echo "  Date: $(git log -1 --pretty=format:'%ci')"
 
       - name: Log into registry ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
@@ -73,5 +79,4 @@ jobs:
             GIT_COMMIT_MESSAGE=${{ steps.git-info.outputs.commit-message }}
             GIT_COMMIT_DATE=${{ steps.git-info.outputs.commit-date }}
             GIT_BRANCH=${{ steps.git-info.outputs.branch }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max 
+          no-cache: true 
