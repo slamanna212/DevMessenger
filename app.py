@@ -31,8 +31,8 @@ class ColoredFormatter(logging.Formatter):
 
 # Setup logging
 log_formatter = ColoredFormatter(
-    fmt='%(asctime)s | %(levelname)s | %(name)s | %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    fmt='%(asctime)s | %(levelname)s | %(message)s',
+    datefmt='%H:%M:%S'
 )
 
 # Configure root logger
@@ -49,7 +49,7 @@ console_handler.setFormatter(log_formatter)
 root_logger.addHandler(console_handler)
 
 # Create app logger
-logger = logging.getLogger('DevMessenger')
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
