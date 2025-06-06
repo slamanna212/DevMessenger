@@ -21,37 +21,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch complete git history
-          ref: ${{ github.sha }}  # Ensure we're on the exact commit
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Extract git information
-        id: git-info
-        run: |
-          # Force fresh git info extraction
-          echo "Current commit (github.sha): ${{ github.sha }}"
-          echo "Current ref: ${{ github.ref }}"
-          echo "Head ref: ${{ github.head_ref || github.ref_name }}"
-          
-          # Use GitHub's provided SHA instead of git commands
-          COMMIT_HASH="${{ github.sha }}"
-          COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s' ${{ github.sha }})
-          COMMIT_DATE=$(git log -1 --pretty=format:'%ci' ${{ github.sha }})
-          BRANCH_NAME="${{ github.ref_name }}"
-          
-          echo "commit-hash=${COMMIT_HASH}" >> $GITHUB_OUTPUT
-          echo "commit-message=${COMMIT_MESSAGE}" >> $GITHUB_OUTPUT
-          echo "commit-date=${COMMIT_DATE}" >> $GITHUB_OUTPUT
-          echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
-          
-          echo "Git info extracted:"
-          echo "  Hash: ${COMMIT_HASH}"
-          echo "  Message: ${COMMIT_MESSAGE}"
-          echo "  Date: ${COMMIT_DATE}"
-          echo "  Branch: ${BRANCH_NAME}"
 
       - name: Log into registry ${{ env.REGISTRY }}
         if: github.event_name != 'pull_request'
@@ -74,13 +46,6 @@ jobs:
             type=sha
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Debug metadata
-        run: |
-          echo "Generated tags: ${{ steps.meta.outputs.tags }}"
-          echo "Branch: ${{ github.ref }}"
-          echo "Is main branch: ${{ github.ref == 'refs/heads/main' }}"
-          echo "Event: ${{ github.event_name }}"
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -89,8 +54,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            GIT_COMMIT_HASH=${{ steps.git-info.outputs.commit-hash }}
-            GIT_COMMIT_MESSAGE=${{ steps.git-info.outputs.commit-message }}
-            GIT_COMMIT_DATE=${{ steps.git-info.outputs.commit-date }}
-            GIT_BRANCH=${{ steps.git-info.outputs.branch }}
+            GIT_COMMIT_HASH=${{ github.sha }}
+            GIT_COMMIT_MESSAGE=${{ github.event.head_commit.message }}
+            GIT_COMMIT_DATE=${{ github.event.head_commit.timestamp }}
+            GIT_BRANCH=${{ github.ref_name }}
           no-cache: true 
