@@ -70,6 +70,21 @@ logger.info(f"   ├─ Bug webhook: {'✓ Configured' if DISCORD_WEBHOOK_BUG el
 logger.info(f"   ├─ Feature webhook: {'✓ Configured' if DISCORD_WEBHOOK_FEATURE else '✗ Not configured'}")
 logger.info(f"   └─ Default webhook: {'✓ Configured' if DISCORD_WEBHOOK_DEFAULT else '✗ Not configured'}")
 
+# Display git information
+git_commit = os.getenv('GIT_COMMIT_HASH', 'unknown')
+git_message = os.getenv('GIT_COMMIT_MESSAGE', 'unknown') 
+git_date = os.getenv('GIT_COMMIT_DATE', 'unknown')
+git_branch = os.getenv('GIT_BRANCH', 'unknown')
+
+if git_commit != 'unknown':
+    logger.info("📋 Build Information:")
+    logger.info(f"   ├─ Branch: {git_branch}")
+    logger.info(f"   ├─ Commit: {git_commit[:8]}...")
+    logger.info(f"   ├─ Message: {git_message}")
+    logger.info(f"   └─ Date: {git_date}")
+else:
+    logger.info("📋 Build Information: Development build (git info not available)")
+
 def get_webhook_url(issue_type):
     """Determine which Discord webhook URL to use based on issue type"""
     if not issue_type:
@@ -239,4 +254,5 @@ def health_check():
 if __name__ == '__main__':
     logger.info("🚀 Starting GitHub to Discord notification bot")
     logger.info("🌐 Server listening on http://0.0.0.0:5000")
+    
     app.run(host='0.0.0.0', port=5000)

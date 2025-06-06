@@ -2,10 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including git
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first to leverage Docker cache
@@ -14,6 +15,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
 COPY . .
+
+# Capture git information during build
+ARG GIT_COMMIT_HASH
+ARG GIT_COMMIT_MESSAGE
+ARG GIT_COMMIT_DATE
+ARG GIT_BRANCH
+
+# Set git info as environment variables
+ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH:-unknown}
+ENV GIT_COMMIT_MESSAGE=${GIT_COMMIT_MESSAGE:-unknown}
+ENV GIT_COMMIT_DATE=${GIT_COMMIT_DATE:-unknown}
+ENV GIT_BRANCH=${GIT_BRANCH:-unknown}
 
 # Create a non-root user and switch to it
 RUN useradd -m appuser && chown -R appuser:appuser /app
