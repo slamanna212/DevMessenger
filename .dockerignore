@@ -19,4 +19,5 @@ htmlcov/
 .tox
 build/
 dist/
-*.egg-info/ 
+*.egg-info/
+build_info.py 

@@ -70,11 +70,19 @@ logger.info(f"   ├─ Bug webhook: {'✓ Configured' if DISCORD_WEBHOOK_BUG el
 logger.info(f"   ├─ Feature webhook: {'✓ Configured' if DISCORD_WEBHOOK_FEATURE else '✗ Not configured'}")
 logger.info(f"   └─ Default webhook: {'✓ Configured' if DISCORD_WEBHOOK_DEFAULT else '✗ Not configured'}")
 
-# Display build information
-build_commit = os.getenv('BUILD_COMMIT_HASH', 'unknown')
-build_message = os.getenv('BUILD_COMMIT_MESSAGE', 'unknown') 
-build_date = os.getenv('BUILD_COMMIT_DATE', 'unknown')
-build_branch = os.getenv('BUILD_BRANCH', 'unknown')
+# Import build information from generated file (baked into code during build)
+try:
+    from build_info import BUILD_COMMIT_HASH, BUILD_COMMIT_MESSAGE, BUILD_COMMIT_DATE, BUILD_BRANCH
+    build_commit = BUILD_COMMIT_HASH
+    build_message = BUILD_COMMIT_MESSAGE
+    build_date = BUILD_COMMIT_DATE
+    build_branch = BUILD_BRANCH
+except ImportError:
+    # Fallback for development when build_info.py doesn't exist
+    build_commit = 'unknown'
+    build_message = 'Development build'
+    build_date = 'unknown'
+    build_branch = 'unknown'
 
 if build_commit != 'unknown':
     logger.info("📋 Build Information:")
