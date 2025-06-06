@@ -2,31 +2,34 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# Install system dependencies including git
+# Capture git information during build (before copying source)
+ARG GIT_COMMIT_HASH
+ARG GIT_COMMIT_MESSAGE
+ARG GIT_COMMIT_DATE
+ARG GIT_BRANCH
+
+# Set git info as environment variables early
+ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH:-unknown}
+ENV GIT_COMMIT_MESSAGE=${GIT_COMMIT_MESSAGE:-unknown}
+ENV GIT_COMMIT_DATE=${GIT_COMMIT_DATE:-unknown}
+ENV GIT_BRANCH=${GIT_BRANCH:-unknown}
+
+# Install system dependencies (removed git as we don't need it in container)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     curl \
-    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
+# Copy the application files (excluding .git directory)
+COPY app.py .
 COPY . .
 
-# Capture git information during build
-ARG GIT_COMMIT_HASH
-ARG GIT_COMMIT_MESSAGE
-ARG GIT_COMMIT_DATE
-ARG GIT_BRANCH
-
-# Set git info as environment variables
-ENV GIT_COMMIT_HASH=${GIT_COMMIT_HASH:-unknown}
-ENV GIT_COMMIT_MESSAGE=${GIT_COMMIT_MESSAGE:-unknown}
-ENV GIT_COMMIT_DATE=${GIT_COMMIT_DATE:-unknown}
-ENV GIT_BRANCH=${GIT_BRANCH:-unknown}
+# Remove any .git directory that might have been copied
+RUN rm -rf .git
 
 # Create a non-root user and switch to it
 RUN useradd -m appuser && chown -R appuser:appuser /app

@@ -9,4 +9,14 @@ __pycache__
 env/
 venv/
 .venv/
-README.md 
+README.md
+.github/
+*.md
+.pytest_cache
+.coverage
+htmlcov/
+.mypy_cache
+.tox
+build/
+dist/
+*.egg-info/ 
