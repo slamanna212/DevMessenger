@@ -1,55 +1,98 @@
 import os
 import logging
+import sys
 from flask import Flask, request, jsonify
 import requests
 from dotenv import load_dotenv
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+# Configure enhanced logging
+class ColoredFormatter(logging.Formatter):
+    """Custom formatter with colors for different log levels"""
+    
+    # ANSI color codes
+    COLORS = {
+        'DEBUG': '\033[36m',    # Cyan
+        'INFO': '\033[32m',     # Green
+        'WARNING': '\033[33m',  # Yellow
+        'ERROR': '\033[31m',    # Red
+        'CRITICAL': '\033[35m', # Magenta
+        'ENDC': '\033[0m',      # End color
+        'BOLD': '\033[1m',      # Bold
+    }
+    
+    def format(self, record):
+        # Add color to levelname
+        if record.levelname in self.COLORS:
+            record.levelname = f"{self.COLORS[record.levelname]}{self.COLORS['BOLD']}{record.levelname:<8}{self.COLORS['ENDC']}"
+        
+        # Format the message
+        formatted = super().format(record)
+        return formatted
+
+# Setup logging
+log_formatter = ColoredFormatter(
+    fmt='%(asctime)s | %(levelname)s | %(name)s | %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-logger = logging.getLogger(__name__)
+
+# Configure root logger
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+
+# Remove default handlers
+for handler in root_logger.handlers[:]:
+    root_logger.removeHandler(handler)
+
+# Add colored console handler
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(log_formatter)
+root_logger.addHandler(console_handler)
+
+# Create app logger
+logger = logging.getLogger('DevMessenger')
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 
+# Reduce Flask's built-in logging verbosity
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
+
 # Discord webhook URLs
 DISCORD_WEBHOOK_BUG = os.getenv('DISCORD_WEBHOOK_BUG')
 DISCORD_WEBHOOK_FEATURE = os.getenv('DISCORD_WEBHOOK_FEATURE')
 DISCORD_WEBHOOK_DEFAULT = os.getenv('DISCORD_WEBHOOK_DEFAULT')
 
-# Log webhook URLs (without exposing full URLs)
-logger.info(f"Bug webhook configured: {'Yes' if DISCORD_WEBHOOK_BUG else 'No'}")
-logger.info(f"Feature webhook configured: {'Yes' if DISCORD_WEBHOOK_FEATURE else 'No'}")
-logger.info(f"Default webhook configured: {'Yes' if DISCORD_WEBHOOK_DEFAULT else 'No'}")
+# Log webhook configuration status
+logger.info("🔧 Webhook Configuration:")
+logger.info(f"   ├─ Bug webhook: {'✓ Configured' if DISCORD_WEBHOOK_BUG else '✗ Not configured'}")
+logger.info(f"   ├─ Feature webhook: {'✓ Configured' if DISCORD_WEBHOOK_FEATURE else '✗ Not configured'}")
+logger.info(f"   └─ Default webhook: {'✓ Configured' if DISCORD_WEBHOOK_DEFAULT else '✗ Not configured'}")
 
 def get_webhook_url(issue_type):
     """Determine which Discord webhook URL to use based on issue type"""
     if not issue_type:
-        logger.info(f"No type provided, using default webhook")
+        logger.debug("No issue type provided, using default webhook")
         return DISCORD_WEBHOOK_DEFAULT
     
     type_name = issue_type['name'].lower()
-    logger.info(f"Processing issue type: {type_name}")
+    logger.debug(f"Issue categorized as: {type_name}")
     
     if type_name == 'bug':
-        logger.info(f"Issue typed as bug, using bug webhook")
+        logger.debug("🐛 Routing to bug webhook")
         return DISCORD_WEBHOOK_BUG
     elif type_name == 'feature' or type_name == 'enhancement':
-        logger.info(f"Issue typed as feature/enhancement, using feature webhook")
+        logger.debug("✨ Routing to feature webhook")
         return DISCORD_WEBHOOK_FEATURE
     
-    logger.info(f"Type {type_name} not matched, using default webhook")
+    logger.debug(f"🔀 Type '{type_name}' not matched, using default webhook")
     return DISCORD_WEBHOOK_DEFAULT
 
 def send_discord_notification(webhook_url, issue_data):
     """Send notification to Discord"""
     if not webhook_url:
-        logger.error("No webhook URL provided")
+        logger.error("❌ No webhook URL configured")
         return
     
     try:
@@ -59,7 +102,14 @@ def send_discord_notification(webhook_url, issue_data):
         user = issue['user']
         issue_type = issue_data.get('type', {})
         
-        logger.info(f"Preparing Discord notification for issue: {issue['title']} in repo: {repo['full_name']}")
+        # Determine webhook type for logging
+        webhook_type = "default"
+        if webhook_url == DISCORD_WEBHOOK_BUG:
+            webhook_type = "bug"
+        elif webhook_url == DISCORD_WEBHOOK_FEATURE:
+            webhook_type = "feature"
+        
+        logger.info(f"📤 Sending → {webhook_type} channel: #{issue['number']} '{issue['title'][:30]}...' by @{user['login']}")
         
         # Create Discord embed
         embed = {
@@ -94,55 +144,63 @@ def send_discord_notification(webhook_url, issue_data):
             "embeds": [embed]
         }
         
-        # Log the payload (without sensitive data)
-        logger.info(f"Sending Discord notification with title: {embed['title']}")
-        
         # Send to Discord
         response = requests.post(webhook_url, json=payload)
         response.raise_for_status()
-        logger.info(f"Successfully sent notification to Discord. Status code: {response.status_code}")
+        
+        logger.info(f"✅ Discord → {webhook_type}: Issue #{issue['number']} delivered (HTTP {response.status_code})")
         return response.status_code
+        
     except KeyError as e:
-        logger.error(f"Failed to process webhook data: Missing key {str(e)}")
-        logger.error(f"Received data structure: {issue_data.keys()}")
+        logger.error(f"❌ Data error: Missing key '{str(e)}' in webhook payload")
+        logger.debug(f"Available data keys: {list(issue_data.keys())}")
         return None
     except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to send Discord notification: {str(e)}")
+        logger.error(f"❌ Discord API error: {str(e)}")
         return None
     except Exception as e:
-        logger.error(f"Unexpected error in send_discord_notification: {str(e)}")
+        logger.error(f"❌ Unexpected error in notification handler: {str(e)}")
         return None
 
 @app.route('/webhook', methods=['POST'])
 def github_webhook():
     """Handle incoming GitHub webhooks"""
     try:
-        # Log headers for debugging
+        # Extract headers
         event_type = request.headers.get('X-GitHub-Event')
         delivery_id = request.headers.get('X-GitHub-Delivery')
-        content_type = request.headers.get('Content-Type')
-        logger.info(f"Received GitHub webhook - Event: {event_type}, Delivery ID: {delivery_id}, Content-Type: {content_type}")
+        
+        # Log ALL incoming webhooks for visibility
+        logger.info(f"📥 Webhook: {event_type} | ID: {delivery_id[:8] if delivery_id else 'unknown'}")
         
         if not request.is_json:
-            logger.error("Request is not JSON")
+            logger.warning("⚠️  Invalid payload: Not JSON")
             return jsonify({"message": "Content type must be application/json"}), 415
         
         data = request.json
-        logger.info(f"Received webhook action: {data.get('action')}")
+        action = data.get('action')
         
-        # Only process issue events
-        if event_type != 'issues':
-            logger.info(f"Skipping non-issue event: {event_type}")
+        # Log the action for all webhooks
+        if event_type == 'issues':
+            issue_number = data.get('issue', {}).get('number', 'unknown')
+            repo_name = data.get('repository', {}).get('full_name', 'unknown')
+            logger.info(f"📋 Issue #{issue_number} in {repo_name} | Action: {action}")
+        else:
+            logger.info(f"🔄 Event: {event_type} | Action: {action} | Skipped (not issue)")
             return jsonify({"message": "Not an issue event"}), 200
             
         # Only process when issues are typed
-        if data['action'] != 'typed':
-            logger.info(f"Skipping issue event with action: {data['action']}")
+        if action != 'typed':
+            logger.info(f"⏭️  Issue action '{action}' ignored (waiting for 'typed')")
             return jsonify({"message": "Not an issue typing event"}), 200
         
+        # Process the typed issue
         issue_number = data['issue']['number']
         repo_name = data['repository']['full_name']
-        logger.info(f"Processing typed issue #{issue_number} from {repo_name}")
+        issue_title = data['issue']['title']
+        issue_type = data.get('type', {}).get('name', 'unspecified')
+        
+        logger.info(f"🏷️  Processing: #{issue_number} '{issue_title[:50]}...' | Type: {issue_type}")
         
         # Get appropriate webhook URL based on type
         webhook_url = get_webhook_url(data.get('type'))
@@ -150,26 +208,35 @@ def github_webhook():
         # Send notification
         status_code = send_discord_notification(webhook_url, data)
         
-        response_message = {
-            "message": "Notification sent" if status_code else "Failed to send notification",
-            "status_code": status_code,
-            "issue_number": issue_number,
-            "repository": repo_name
-        }
-        
-        logger.info(f"Webhook processing complete: {response_message}")
-        return jsonify(response_message), 200 if status_code else 500
+        if status_code:
+            logger.info(f"✅ Complete: Issue #{issue_number} → Discord (HTTP {status_code})")
+            response_message = {
+                "message": "Notification sent successfully",
+                "status_code": status_code,
+                "issue_number": issue_number,
+                "repository": repo_name
+            }
+            return jsonify(response_message), 200
+        else:
+            logger.error(f"❌ Failed: Issue #{issue_number} → Discord notification failed")
+            response_message = {
+                "message": "Failed to send notification",
+                "issue_number": issue_number,
+                "repository": repo_name
+            }
+            return jsonify(response_message), 500
         
     except Exception as e:
-        logger.error(f"Error processing webhook: {str(e)}")
+        logger.error(f"❌ Critical error processing webhook: {str(e)}")
         return jsonify({"message": "Internal server error", "error": str(e)}), 500
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Simple health check endpoint"""
-    logger.info("Health check requested")
+    # No logging for health checks to reduce noise
     return jsonify({"status": "healthy"}), 200
 
 if __name__ == '__main__':
-    logger.info("Starting GitHub to Discord notification bot")
+    logger.info("🚀 Starting GitHub to Discord notification bot")
+    logger.info("🌐 Server listening on http://0.0.0.0:5000")
     app.run(host='0.0.0.0', port=5000)
